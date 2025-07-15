@@ -158,3 +158,46 @@ class TaskManagerApp:
         self.task_entry.delete(0, tk.END)
         self.priority_entry.delete(0, tk.END)
         self.flash_listbox("lightgreen")
+
+
+
+    def delete_task(self):
+        selected = self.task_listbox.curselection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select a task to delete.")
+            return
+
+        index = selected[0]
+        line = self.task_listbox.get(index)
+        desc = line.split("] ", 1)[1]
+
+        confirm = messagebox.askyesno("Delete Task", f"Are you sure you want to delete '{desc}'?")
+        if confirm:
+            self.db.delete_task(desc)
+            self.task_listbox.delete(index)
+            self.stack.push((desc, 5))
+            self.linked_list.delete(desc)
+            self.notifications.enqueue(f"Task deleted: {desc}")
+            self.log(f"Deleted task: {desc}")
+            self.log("Pushed to stack, removed from LinkedList")
+            self.flash_listbox("orange")
+
+    def undo_delete(self):
+        if self.stack.is_empty():
+            messagebox.showinfo("Undo", "Nothing to undo.")
+            return
+
+        desc, priority = self.stack.pop()
+        self.db.add_task(desc)
+        task_id = self.db.get_all_tasks()[-1][0]
+
+        self.bst.insert(priority, task_id, desc)
+        self.linked_list.insert(desc)
+        self.graph.add_task(desc)
+
+        self.task_listbox.insert(tk.END, f"[{priority}] {desc}")
+        self.notifications.enqueue(f"Undo: Restored task '{desc}'")
+        messagebox.showinfo("Undo", f"Task '{desc}' has been restored.")
+        self.log(f"Undo delete: Restored task '{desc}'")
+        self.log("Inserted into BST, LinkedList, and Graph")
+        self.flash_listbox("lightblue")
