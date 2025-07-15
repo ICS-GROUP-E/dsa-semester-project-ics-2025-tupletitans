@@ -1,10 +1,10 @@
 class Node:
-    def __init__(self, data):
+    def _init_(self, data):
         self.data = data
         self.next = None
 
 class TaskLinkedList:
-    def __init__(self):
+    def _init_(self):
         self.head = None
 
     def insert(self, data):
