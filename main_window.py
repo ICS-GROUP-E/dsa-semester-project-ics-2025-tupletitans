@@ -57,3 +57,104 @@ class TaskManagerApp:
         self.notification_tab = ttk.Frame(notebook)
         self.dependency_tab = ttk.Frame(notebook)
         self.log_tab = ttk.Frame(notebook)
+
+    def create_dependency_tab(self):
+        frame = ttk.LabelFrame(self.dependency_tab, text="Add Task Dependencies")
+        frame.pack(padx=20, pady=20, fill="x")
+
+        ttk.Label(frame, text="Add Dependency (task depends on):").pack(pady=5)
+        self.task_main_entry = ttk.Entry(frame, width=30)
+        self.task_main_entry.pack(pady=5)
+        self.task_main_entry.insert(0, "Task A")
+
+        self.task_depends_on_entry = ttk.Entry(frame, width=30)
+        self.task_depends_on_entry.pack(pady=5)
+        self.task_depends_on_entry.insert(0, "Task B")
+
+        ttk.Button(frame, text="➕ Add Dependency", command=self.add_dependency).pack(pady=5)
+        ttk.Button(frame, text="🧭 Show Topological Order", command=self.show_task_order).pack(pady=5)
+
+    def create_log_tab(self):
+        frame = ttk.LabelFrame(self.log_tab, text="📜 DS Operations Log")
+        frame.pack(fill='both', padx=20, pady=20, expand=True)
+
+        self.log_text = tk.Text(frame, height=25, bg='lightgray', fg='black', wrap='word', state='disabled')
+        self.log_text.pack(fill='both', expand=True)
+
+    def log(self, message):
+        timestamped = f"[{datetime.now().strftime('%H:%M:%S')}] {message}"
+        self.log_entries.append(timestamped)
+        self.log_text.config(state='normal')
+        self.log_text.insert(tk.END, timestamped + "\n")
+        self.log_text.see(tk.END)
+        self.log_text.config(state='disabled')
+
+    def export_logs_to_file(self):
+        try:
+            with open("ds_operations_log.txt", "w") as f:
+                f.write("\n".join(self.log_entries))
+            messagebox.showinfo("Export Success", "Log exported to ds_operations_log.txt")
+        except Exception as e:
+            messagebox.showerror("Export Failed", str(e))
+
+    def flash_listbox(self, color):
+        original = self.task_listbox.cget("background")
+        self.task_listbox.config(background=color)
+        self.root.after(200, lambda: self.task_listbox.config(background=original))
+
+    def load_tasks(self):
+        tasks = self.db.get_all_tasks()
+        for task_id, desc in tasks:
+            priority = 5
+            self.bst.insert(priority, task_id, desc)
+            self.linked_list.insert(desc)
+            self.graph.add_task(desc)
+            self.task_listbox.insert(tk.END, f"[{priority}] {desc}")
+            self.log(f"Loaded task from DB: [{priority}] {desc}")
+
+    def show_help(self):
+        messagebox.showinfo("How to Use Task Manager", (
+            "🧩 To add a task:\n"
+            "- Enter the task description\n"
+            "- Set a priority between 1 and 10\n"
+            "- Click 'Add Task'\n\n"
+            "🗑 To delete or undo:\n"
+            "- Select a task from the list\n"
+            "- Click 'Delete Task' or 'Undo Delete'\n\n"
+            "📚 Other Features:\n"
+            "- View tasks by priority (BST)\n"
+            "- View history (Linked List)\n"
+            "- Show notifications\n"
+            "- Add task dependencies\n"
+            "- Perform topological sort to get task order"
+        ))
+
+    def add_task(self):
+        desc = self.task_entry.get().strip()
+        if not desc:
+            messagebox.showerror("Missing Description", "Please enter a task description.")
+            return
+
+        try:
+            priority = int(self.priority_entry.get().strip())
+            if not 1 <= priority <= 10:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Invalid Priority", "Please enter a number between 1 and 10.")
+            return
+
+        self.db.add_task(desc)
+        task_id = self.db.get_all_tasks()[-1][0]
+
+        self.bst.insert(priority, task_id, desc)
+        self.linked_list.insert(desc)
+        self.graph.add_task(desc)
+
+        self.task_listbox.insert(tk.END, f"[{priority}] {desc}")
+        self.notifications.enqueue(f"Task added: {desc}")
+        self.log(f"Added task: [{priority}] {desc}")
+        self.log("Inserted into BST, LinkedList, and Graph")
+
+        self.task_entry.delete(0, tk.END)
+        self.priority_entry.delete(0, tk.END)
+        self.flash_listbox("lightgreen")
