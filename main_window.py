@@ -201,3 +201,94 @@ class TaskManagerApp:
         self.log(f"Undo delete: Restored task '{desc}'")
         self.log("Inserted into BST, LinkedList, and Graph")
         self.flash_listbox("lightblue")
+
+    def show_sorted_tasks(self):
+        sorted_tasks = self.bst.inorder()
+        if not sorted_tasks:
+            messagebox.showinfo("No Tasks", "No tasks found.")
+            return
+
+        window = tk.Toplevel(self.root)
+        window.title("Tasks by Priority (BST)")
+        window.geometry("450x300")
+
+        listbox = tk.Listbox(window, width=50, height=15)
+        listbox.pack(pady=10)
+
+        for priority, _, desc in sorted_tasks:
+            listbox.insert(tk.END, f"[{priority}] {desc}")
+
+        self.log("Displayed BST in-order traversal")
+
+    def show_task_history(self):
+        task_list = self.linked_list.display()
+        if not task_list:
+            messagebox.showinfo("No Tasks", "No task history available.")
+            return
+
+        window = tk.Toplevel(self.root)
+        window.title("Task History (Linked List)")
+        window.geometry("450x300")
+
+        listbox = tk.Listbox(window, width=50, height=15)
+        listbox.pack(pady=10)
+
+        for task in task_list:
+            listbox.insert(tk.END, task)
+
+        self.log("Displayed LinkedList task history")
+
+    def show_notification(self):
+        if self.notifications.is_empty():
+            messagebox.showinfo("Notifications", "No new notifications.")
+        else:
+            message = self.notifications.dequeue()
+            messagebox.showinfo("Notification", message)
+            self.log(f"Dequeued notification: {message}")
+
+    def add_dependency(self):
+        task = self.task_main_entry.get().strip()
+        depends_on = self.task_depends_on_entry.get().strip()
+
+        if not task or not depends_on:
+            messagebox.showerror("Input Error", "Both Task A and Task B must be filled.")
+            return
+        if task == depends_on:
+            messagebox.showerror("Invalid Dependency", "A task cannot depend on itself.")
+            return
+
+        self.graph.add_task(task)
+        self.graph.add_task(depends_on)
+        self.graph.add_dependency(task, depends_on)
+        self.notifications.enqueue(f"Added dependency: {task} → {depends_on}")
+        messagebox.showinfo("Success", f"{task} now depends on {depends_on}")
+        self.log(f"Added dependency: {task} → {depends_on}")
+
+    def show_task_order(self):
+        try:
+            order = self.graph.topological_sort()
+            if not order:
+                messagebox.showinfo("No Tasks", "No tasks available in graph.")
+                return
+
+            window = tk.Toplevel(self.root)
+            window.title("Task Order (Topological Sort)")
+            window.geometry("400x300")
+
+            listbox = tk.Listbox(window, width=50, height=15)
+            listbox.pack(pady=10)
+
+            for task in order:
+                listbox.insert(tk.END, task)
+
+            self.log("Performed topological sort")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Topological sort failed: {e}")
+            self.log(f"Topological sort error: {e}")
+
+
+if _name_ == "_main_":
+    root = tk.Tk()
+    app = TaskManagerApp(root)
+    root.mainloop()
