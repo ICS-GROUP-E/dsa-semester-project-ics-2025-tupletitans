@@ -7,8 +7,8 @@ class TaskGraph:
             self.graph[task] = []
 
     def add_dependency(self, task, depends_on):
-        if task in self.graph:
-            self.graph[task]
+        if task not in self.graph:
+            self.graph[task] = []
         if depends_on not in self.graph:
             self.graph[depends_on] = []
         self.graph[depends_on].append(task)
@@ -30,4 +30,6 @@ class TaskGraph:
         for node in self.graph:
             visit(node)
 
-        return stack[::-1]
+        return stack[:: -1]
+
+
